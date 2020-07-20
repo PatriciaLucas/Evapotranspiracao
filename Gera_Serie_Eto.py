@@ -86,7 +86,7 @@ def Ea(tmin, tmax, RH):
       ea = (RH * Es_medio(tmax,tmin))/ 100.0
     return ea
     
-def Ra(latitude, declinacao_sol, omega, dr):
+def Ra(latitude, declinacao_sol, omega, dr, Gsc):
     """
     Radiação extraterrestre para períodos diários ( Ra ): Equação 21 (FAO 56)
     :parâmetro latitude: latitude [rad]
@@ -166,7 +166,7 @@ def Rns(rs, albedo=0.23):
     """
     return (1 - albedo) * rs
     
-def Rnl(tmin, tmax, rs, rso, ea):
+def Rnl(tmin, tmax, rs, rso, ea, sigma):
     """
     Radiação de onda longa líquida ( Rnl ): Equação 39 (FAO 56)
     :parâmetro tmin: Temperatura mínima absoluta [K]
@@ -222,7 +222,7 @@ def gera_serie(dataset):
     :return: Série de Evapotranspiração de referência (ETo) [mm day-1].
     """
   serie_ eto = []
-  for i in range(len(dataset)):
+  for i in range(len(dataset), G):
     es = Es_medio(dataset[i,2],dataset[i,1]) #------------> Pressão do vapor de saturação
     ea = Ea(dataset[i,2],dataset[i,1],dataset[i,5]) #--------> Pressão do vapor atual
     delta = Delta(dataset[i,4]) #----------------------> Declividade da curva de pressão do vapor
