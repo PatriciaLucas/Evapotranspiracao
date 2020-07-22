@@ -21,13 +21,9 @@ Fluxo de calor do solo (G) para o período de 1 dia ou 10 dias = 0
 """
 
 import pandas as pd
-from google.colab import files
-import matplotlib as plt
-import matplotlib.pyplot as plt
 import math
 import numpy as np
 from datetime import datetime
-import seaborn as sns
 
 def Pressao_atm(altitude):
     """
@@ -81,9 +77,9 @@ def Ea(tmin, tmax, RH):
     :return: pressão de vapor atual [kPa]
     """
     if np.isnan(RH):
-      ea = 0.611 * math.exp((17.27 * tmin) / (tmin + 237.3))
+        ea = 0.611 * math.exp((17.27 * tmin) / (tmin + 237.3))
     else:
-      ea = (RH * Es_medio(tmax,tmin))/ 100.0
+        ea = (RH * Es_medio(tmax,tmin))/ 100.0
     return ea
     
 def Ra(latitude, declinacao_sol, omega, dr, Gsc):
@@ -210,7 +206,7 @@ def fao56_penman_monteith(rn, t, u2, es, ea, delta, gamma, G):
     a2 =  a1 / (delta + (gamma * (1 + 0.34 * u2)))
     return a2
     
-def gera_serie(dataset):
+def gera_serie(dataset, latitude, altitude, Gsc, sigma, G):
     """
     Gera a série Evapotranspiração de referência (ETo): Equação 6 (FAO 56)
     :parâmetro dataset: dataset com os seguintes dados: 
@@ -221,23 +217,23 @@ def gera_serie(dataset):
         - Dia do ano - J
     :return: Série de Evapotranspiração de referência (ETo) [mm day-1].
     """
-  serie_ eto = []
-  for i in range(len(dataset), G):
-    es = Es_medio(dataset[i,2],dataset[i,1]) #------------> Pressão do vapor de saturação
-    ea = Ea(dataset[i,2],dataset[i,1],dataset[i,5]) #--------> Pressão do vapor atual
-    delta = Delta(dataset[i,4]) #----------------------> Declividade da curva de pressão do vapor
-    pressao_atm = Pressao_atm(altitude) #-----------> Pressão atmosférica
-    gamma = psicrometrica(pressao_atm) #------------> Constante
-    declinacao_sol = Declinacao_sol(dataset[i,7]) #----> Declinação solar
-    omega = Omega(latitude, declinacao_sol) #-------> Ângulo horário pôr-do-sol
-    dr = Dr(dataset[i,7]) #----------------------------> Inverso da distância relativa da terra-sol
-    ra = Ra(latitude, declinacao_sol, omega, dr) #--> Radiação extraterrestre para períodos diários
-    N = N_insolacao(omega) #------------------------> Duração máxima de insolação no dia
-    rs = Rs(N, dataset[i,3], ra, dataset[i,1], dataset[i,2]) #---------------------> Radiação solar
-    rso = Rso(altitude, ra) #-----------------------> Radiação solar de céu claro
-    rns = Rns(rs, albedo=0.23) #--------------------> Radiação de onda curta líquida
-    rnl = Rnl(dataset[i,2],dataset[i,1], rs, rso, ea) #---> Radiação de onda longa líquida
-    rn = Rn(rns,rnl) #------------------------------> Radiação líquida
-    serie_eto.append(fao56_penman_monteith(rn, dataset[i,4], dataset[i,6], es, ea, delta, gamma, G)) #---> Evapotranspiração
+    serie_eto = []
+    for i in range(len(dataset)):
+        es = Es_medio(dataset[i,2],dataset[i,1]) #------------> Pressão do vapor de saturação
+        ea = Ea(dataset[i,2],dataset[i,1],dataset[i,5]) #--------> Pressão do vapor atual
+        delta = Delta(dataset[i,4]) #----------------------> Declividade da curva de pressão do vapor
+        pressao_atm = Pressao_atm(altitude) #-----------> Pressão atmosférica
+        gamma = psicrometrica(pressao_atm) #------------> Constante
+        declinacao_sol = Declinacao_sol(dataset[i,7]) #----> Declinação solar
+        omega = Omega(latitude, declinacao_sol) #-------> Ângulo horário pôr-do-sol
+        dr = Dr(dataset[i,7]) #----------------------------> Inverso da distância relativa da terra-sol
+        ra = Ra(latitude, declinacao_sol, omega, dr, Gsc) #--> Radiação extraterrestre para períodos diários
+        N = N_insolacao(omega) #------------------------> Duração máxima de insolação no dia
+        rs = Rs(N, dataset[i,3], ra, dataset[i,1], dataset[i,2]) #---------------------> Radiação solar
+        rso = Rso(altitude, ra) #-----------------------> Radiação solar de céu claro
+        rns = Rns(rs, albedo=0.23) #--------------------> Radiação de onda curta líquida
+        rnl = Rnl(dataset[i,2],dataset[i,1], rs, rso, ea, sigma) #---> Radiação de onda longa líquida
+        rn = Rn(rns,rnl) #------------------------------> Radiação líquida
+        serie_eto.append(fao56_penman_monteith(rn, dataset[i,4], dataset[i,6], es, ea, delta, gamma, G)) #---> Evapotranspiração
   
-  return serie_eto
+    return serie_eto
