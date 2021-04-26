@@ -179,6 +179,24 @@ def Rnl(tmin, tmax, rs, rso, ea, sigma):
     tmp2 = (0.34 - (0.14 * math.sqrt(ea)))
     tmp3 = 1.35 * (rs / rso) - 0.35
     return tmp1 * tmp2 * tmp3
+
+def Rnl_medio(tmean, rs, rso, ea, sigma):
+    """
+    Equação modificada para dados faltantes de temperaturas máxima e mínima
+    Radiação de onda longa líquida ( Rnl ): Equação 39 (FAO 56)
+    :parâmetro tmean: Temperatura média absoluta [K]
+    :parâmetro Rs: radiação solar [MJ m-2 day-1]. Calculada pela função Rs().
+    :parâmetro Rso: radiação solar de céu claro [MJ m-2 day-1]. Calculada pela função Rso().
+    :parâmetro ea: pressão de vapor atual [kPa]. Calculada pela função Ea().
+    :return:  radiação de onda longa líquida [MJ m-2 day-1]
+    """
+    tmax_k = tmean + 273.16 #----Converte a temperatura de °C para °K
+    tmin_k = tmean + 273.16 #----Converte a temperatura de °C para °K
+    
+    tmp1 = (sigma * ((math.pow(tmax_k, 4) + math.pow(tmin_k, 4)) / 2))
+    tmp2 = (0.34 - (0.14 * math.sqrt(ea)))
+    tmp3 = 1.35 * (rs / rso) - 0.35
+    return tmp1 * tmp2 * tmp3
     
 def Rn(rns, rnl):
     """
@@ -219,7 +237,10 @@ def gera_serie(dataset, latitude, altitude, Gsc, sigma, G):
     """
     serie_eto = []
     for i in range(len(dataset)):
-        es = Es_medio(dataset[i,2],dataset[i,1]) #------------> Pressão do vapor de saturação
+        if np.isnan(dataset[i,2]) == False or np.isnan(dataset[i,1]) == False:
+            es = Es(dataset[i,4]) #------------> Pressão do vapor de saturação
+        else:
+            es = Es_medio(dataset[i,2],dataset[i,1]) #------------> Pressão do vapor de saturação
         ea = Ea(dataset[i,2],dataset[i,1],dataset[i,5]) #--------> Pressão do vapor atual
         delta = Delta(dataset[i,4]) #----------------------> Declividade da curva de pressão do vapor
         pressao_atm = Pressao_atm(altitude) #-----------> Pressão atmosférica
@@ -232,7 +253,10 @@ def gera_serie(dataset, latitude, altitude, Gsc, sigma, G):
         rs = Rs(N, dataset[i,3], ra, dataset[i,1], dataset[i,2]) #---------------------> Radiação solar
         rso = Rso(altitude, ra) #-----------------------> Radiação solar de céu claro
         rns = Rns(rs, albedo=0.23) #--------------------> Radiação de onda curta líquida
-        rnl = Rnl(dataset[i,2],dataset[i,1], rs, rso, ea, sigma) #---> Radiação de onda longa líquida
+        if np.isnan(dataset[i,2]) == False or np.isnan(dataset[i,1]) == False:
+            rnl = Rnl_medio(dataset[i,4], rs, rso, ea, sigma) #---> Radiação de onda longa líquida
+        else:
+            rnl = Rnl(dataset[i,2],dataset[i,1], rs, rso, ea, sigma) #---> Radiação de onda longa líquida
         rn = Rn(rns,rnl) #------------------------------> Radiação líquida
         serie_eto.append(fao56_penman_monteith(rn, dataset[i,4], dataset[i,6], es, ea, delta, gamma, G)) #---> Evapotranspiração
   
